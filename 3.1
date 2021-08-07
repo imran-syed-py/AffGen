@@ -1,0 +1,107 @@
+import re
+import requests
+import pyshorteners
+from os import system, name
+
+
+def clear():
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+
+        # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
+
+
+def unshorten_url(url):
+    return requests.head(url, allow_redirects=True).url
+
+
+def amz_aff(url):
+    if re.search(r'(\&|\?)tag=+[a-zA-Z0-9]+-21', url):
+        return re.sub(r"tag=+[a-zA-Z0-9]+-21", "tag=node17-21", url)
+        # output = re.search(r"(?<=tag).*?(?=-21)", url).group(0)
+        # return url.replace(output, '=node17')
+    elif re.search(r'(\&|\?)linkCode=+[a-zA-Z0-9]+\&', url):
+        return url + "&tag=node17-21"
+    else:
+        return url + "&linkCode=sl1&tag=node17-21"
+
+
+def fk_aff(url):
+    x = re.search(r"affid=+[a-zA-Z0-9]+", url)
+    if x:
+        a = re.sub(r"affExtParam(1|2)=+[a-zA-Z0-9]+", '', url)
+        b = re.sub(r"affid=+[a-zA-Z0-9]+", 'affid=syedimran', a)
+        return b
+    else:
+        a = url + '&affid=syedimran'
+        return re.sub(r'/itm[a-zA-Z0-9]+\&', r'/itm[a-zA-Z0-9]+\?', a)
+
+
+def short_url(url):
+    # s = pyshorteners.Shortener(api_key='0b1c6b4a99f27886b8021a05dbf4949e1c8453dc')
+    s = pyshorteners.Shortener()
+    short = s.isgd.short(url)
+    return short
+
+
+def ekro(url):
+    base_ekaro_url = requests.get(url).text
+    ek_link = re.findall(r'cashbackUrl = .*;', base_ekaro_url)
+    ekro_amz_link = (ek_link[0].replace('cashbackUrl =', '').replace(
+        '"', '').replace(';', '').strip())
+    return ekro_amz_link
+
+
+def proper_url(url):
+    if 'amzn.to' or 'fkrt.it' or 'bit.ly' in url:
+        return unshorten_url(url)
+    else:
+        return url
+
+
+def final_link(link):
+    if 'amazon.in' in link:
+        a = amz_aff(link)
+        return short_url(a)
+    elif 'ekaro' in link:
+        a = ekro(link)
+        if 'amazon.in' in a:
+            b = amz_aff(a)
+            return (short_url(b))
+        elif 'flipkart' in a:
+            b = fk_aff(a)
+            return short_url(b)
+    elif 'flipkart' in link:
+        a = fk_aff(link)
+        return short_url(a)
+    else:
+        return (f'Invalid Url = {link}')
+
+
+def prod_link(link):
+    z = proper_url(link)
+    return final_link(z)
+
+
+buffer = []
+while True:
+    print("> ", end=" ")
+    line = input('')
+    if line == " ":
+        break
+    buffer.append(line)
+
+
+clear()
+
+
+for matter in buffer:
+    if 'http' in matter:
+        pl = re.search("(?P<url>https?://[^\s]+)", matter).group()
+        x = final_link(proper_url(pl))
+        print(matter.replace(pl, f'\n{x}\n'))
+    else:
+        print(matter)
